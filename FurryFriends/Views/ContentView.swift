@@ -11,11 +11,15 @@ struct ContentView: View {
     
     // MARK: Stored properties
     
+    @Environment(\.scenePhase) var scenePhase
+    
     // Address for main image
     // Starts as a transparent pixel – until an address for an animal's image is set
-    @State var currentDog = URL(string: "https://www.russellgordon.ca/lcs/miscellaneous/transparent-pixel.png")!
+    @State var currentImage = URL(string: "https://www.russellgordon.ca/lcs/miscellaneous/transparent-pixel.png")!
     
-    @State var favourites: Dog = Dog(message: "https://www.russellgordon.ca/lcs/miscellaneous/transparent-pixel.png", status: "")
+    @State var currentDog: Dog = Dog(message: "https://www.russellgordon.ca/lcs/miscellaneous/transparent-pixel.png", status: "")
+    
+    @State var favourites: [Dog] = []
     
     @State var currentDogAddedToFavourites: Bool = false
     
@@ -25,15 +29,10 @@ struct ContentView: View {
         VStack {
             
             // Shows the main image
-            RemoteImageView(fromURL: currentDog)
+            RemoteImageView(fromURL: currentImage)
                 .overlay(RoundedRectangle(cornerRadius: 3)
                             .stroke(Color.primary, lineWidth: 3))
                 .padding()
-            
-            Image(systemName: "heart.circle")
-                .foregroundColor(currentDogAddedToFavourites == true ? .red : .secondary)
-                .font(.largeTitle)
-                .padding(.bottom)
             
             Button(action: {
                 
@@ -46,6 +45,25 @@ struct ContentView: View {
             })
                 .buttonStyle(.bordered)
             
+            Image(systemName: "heart.circle")
+                .foregroundColor(currentDogAddedToFavourites == true ? .red : .secondary)
+                .font(.largeTitle)
+                .padding(.bottom)
+                .onTapGesture {
+                    
+                    
+                    if currentDogAddedToFavourites == false {
+                        
+                        favourites.append(currentDog)
+                        
+                        currentDogAddedToFavourites = true
+                        
+                    }
+                }
+            
+            List(favourites, id: \.self) { currentFavourite in
+                Text(currentFavourite.message)
+            }
             
             // Push main image to top of screen
             Spacer()
@@ -59,11 +77,27 @@ struct ContentView: View {
             
             // Replaces the transparent pixel image with an actual image of an animal
             // Adjust according to your preference ☺️
-            currentDog = URL(string: favourites.message)!
+            currentImage = URL(string: currentDog.message)!
             
             await loadNewDog()
-                        
+            
         }
+        
+        .onChange(of: scenePhase) { newPhase in
+            
+            if newPhase == .inactive{
+                print("Inactive")
+            } else if newPhase == .active {
+                print("Active")
+            } else {
+                print("Background")
+                
+                // Permanently save the list of tasks
+                persistFavourites()
+            }
+            
+        }
+        
         .navigationTitle("Furry Dog Friends")
         
     }
@@ -96,9 +130,9 @@ struct ContentView: View {
             //                                 DATA TYPE TO DECODE TO
             //                                         |
             //                                         V
-            favourites = try JSONDecoder().decode(Dog.self, from: data)
+            currentDog = try JSONDecoder().decode(Dog.self, from: data)
             
-            currentDog = URL(string: favourites.message)!
+            currentImage = URL(string: currentDog.message)!
             // Replace the currentImage with a new currentImage based on the link (String) from the API
             
             // Reset the flag that tracks whether the current joke is a favourite
@@ -110,6 +144,41 @@ struct ContentView: View {
             // populates
             print(error)
         }
+    }
+    
+    func persistFavourites() {
+        
+        // Get a location under which to save the data
+        let filename = getDocumentsDirectory().appendingPathComponent(savedFavouritesLabel)
+        print(filename)
+        
+        // Try to encode the data in our list of favourites  JSON
+        
+        do {
+            
+            // Create a JSON encoder object
+            let  encoder = JSONEncoder()
+            
+            // Configured the coder to "pretty print" the JSON
+            encoder.outputFormatting = .prettyPrinted
+            
+            // Encode the list of Favourites we collected
+            let data = try encoder.encode(favourites)
+            
+            // rite the JSON to a file in the fineName location we came up with earlier
+            try data.write(to: filename, options: [.atomicWrite, .completeFileProtection])
+            
+            // See the data that was written
+            print("Save data to the Documetns directory successfully")
+            print("========")
+            print(String(data: data, encoding: .utf8)!)
+            
+        } catch {
+            print("Unable to write list of favourites to the Document directory")
+            print("========")
+            print(error.localizedDescription)
+        }
+        
     }
     
 }
