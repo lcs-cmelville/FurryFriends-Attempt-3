@@ -26,10 +26,30 @@ struct ContentView: View {
             
             // Shows the main image
             RemoteImageView(fromURL: currentDog)
+                .overlay(RoundedRectangle(cornerRadius: 3)
+                            .stroke(Color.primary, lineWidth: 3))
+                .padding()
+            
+            Image(systemName: "heart.circle")
+                .foregroundColor(currentDogAddedToFavourites == true ? .red : .secondary)
+                .font(.largeTitle)
+                .padding(.bottom)
+            
+            Button(action: {
+                
+                Task {
+                    await loadNewDog()
+                }
+                
+            }, label: {
+                Text("New Dog")
+            })
+                .buttonStyle(.bordered)
+            
             
             // Push main image to top of screen
             Spacer()
-
+            
         }
         // Runs once when the app is opened
         .task {
@@ -44,7 +64,7 @@ struct ContentView: View {
             await loadNewDog()
                         
         }
-        .navigationTitle("Furry Friends")
+        .navigationTitle("Furry Dog Friends")
         
     }
     
@@ -52,7 +72,7 @@ struct ContentView: View {
     
     func loadNewDog() async {
         // Assemble the URL that points to the endpoint
-        let url = URL(string: "")!
+        let url = URL(string: "https://dog.ceo/api/breeds/image/random")!
         
         // Define the type of data we want from the endpoint
         // Configure the request to the web site
